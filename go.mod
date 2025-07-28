@@ -1,3 +1,3 @@
-module github.com/Robert-Safin/go-lib
+module github.com/Robert-Safin/go-extra-types
 
 go 1.24.5
