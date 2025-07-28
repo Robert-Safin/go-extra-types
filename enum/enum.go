@@ -2,6 +2,7 @@ package enum
 
 import (
 	"fmt"
+	"maps"
 )
 
 type Enum[T any] struct {
@@ -10,43 +11,61 @@ type Enum[T any] struct {
 }
 
 type Variant[T any] struct {
-	enum    *Enum[T]
-	variant string
+	enum  string
+	name  string
+	value T
 }
 
-func NewEnum[T any](name string, input ...any) Enum[T] {
-	m := make(map[string]T, len(input)/2)
-
-	if len(input)%2 != 0 {
-		panic("Received odd number of inputs")
+func NewEnum[T any](name string, variants map[string]T) Enum[T] {
+	if name == "" {
+		panic("Enum name cannot be empty")
 	}
-
-	for i := 0; i < len(input); i += 2 {
-		key, ok := input[i].(string)
-		if !ok {
-			panic("Enum variant names should be strings")
-		}
-		value, ok := input[i+1].(T)
-		if !ok {
-			panic("Recieved mixed types for Enum values")
-		}
-		m[key] = value
+	if len(variants) == 0 {
+		panic("Enum must have at least one variant")
 	}
+	copy := map[string]T{}
+	maps.Copy(copy, variants)
 	return Enum[T]{
 		name:     name,
-		variants: m,
+		variants: copy,
 	}
 }
 
-func (e Enum[T]) Instance(key string) (Variant[T], error) {
-	_, ok := e.variants[key]
-	var zeroValue Variant[T]
+func (e Enum[T]) NewInstance(name string) Variant[T] {
+	if name == "" {
+		panic("Variant name cannot be empty")
+	}
+	v, ok := e.variants[name]
 	if !ok {
-		return zeroValue, fmt.Errorf("Enum %v does not have variant %v", e.name, key)
+		panic(fmt.Sprintf("Enum %v does not have variant %v\n", e.name, name))
 	}
-	return Variant[T]{enum: &e, variant: key}, nil
+	return Variant[T]{enum: e.name, name: name, value: v}
 }
 
-func (v Variant[T]) Cmp(other Variant[T]) bool {
-	return v.variant == other.variant && v.enum.name == other.enum.name
+func (e Enum[T]) VariantNames() []string {
+	names := make([]string, 0, len(e.variants))
+	for name := range e.variants {
+		names = append(names, name)
+	}
+	return names
+}
+
+func (e Enum[T]) String() string {
+	return fmt.Sprintf("Enum{name: %s, variant count: %v, variants: %v}", e.name, len(e.variants), e.variants)
+}
+
+func (v Variant[T]) IsInstanceOf(enum Enum[T]) bool {
+	_, ok := enum.variants[v.name]
+	return ok && enum.name == v.enum
+}
+
+func (v Variant[T]) Value() T {
+	return v.value
+}
+func (v Variant[T]) Name() string {
+	return v.name
+}
+
+func (v Variant[T]) String() string {
+	return fmt.Sprintf("Variant{enum: %s, name: %s}", v.enum, v.name)
 }

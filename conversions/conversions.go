@@ -1,13 +1,19 @@
 package conversions
 
 import (
-	"github.com/Robert-Safin/go-lib/option"
-	"github.com/Robert-Safin/go-lib/result"
+	"errors"
+
+	"github.com/Robert-Safin/go-extra-types/option"
+	"github.com/Robert-Safin/go-extra-types/result"
 )
 
 func Otr[T any](opt option.Option[T], customErr error) result.Result[T] {
 	if opt.IsNone() {
-		return result.NewErr[T](customErr)
+		if customErr == nil {
+			return result.NewErr[T](errors.New("None value"))
+		} else {
+			return result.NewErr[T](customErr)
+		}
 	}
 	return result.NewOk(opt.Unwrap())
 }
